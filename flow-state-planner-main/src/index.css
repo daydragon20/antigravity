@@ -1,0 +1,171 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+/* EnergiePlanner Design System
+   A calming, wellness-focused design with organic gradients and energy-based colors
+*/
+
+@layer base {
+  :root {
+    /* Core backgrounds - warm cream and soft whites */
+    --background: 45 30% 98%;
+    --foreground: 160 25% 15%;
+
+    /* Card surfaces */
+    --card: 45 40% 99%;
+    --card-foreground: 160 25% 15%;
+
+    /* Popover */
+    --popover: 45 40% 99%;
+    --popover-foreground: 160 25% 15%;
+
+    /* Primary - Sage green for wellness */
+    --primary: 155 35% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Soft cream */
+    --secondary: 45 30% 94%;
+    --secondary-foreground: 160 25% 25%;
+
+    /* Muted - Gentle grey-green */
+    --muted: 150 15% 92%;
+    --muted-foreground: 160 10% 45%;
+
+    /* Accent - Warm amber for energy highlights */
+    --accent: 35 90% 55%;
+    --accent-foreground: 35 90% 15%;
+
+    /* Destructive */
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders and inputs */
+    --border: 150 20% 88%;
+    --input: 150 20% 88%;
+    --ring: 155 35% 45%;
+
+    --radius: 1rem;
+
+    /* Energy level colors */
+    --energy-high: 145 60% 45%;
+    --energy-medium: 45 85% 55%;
+    --energy-low: 15 70% 55%;
+
+    /* Mood colors */
+    --mood-great: 155 50% 50%;
+    --mood-good: 145 40% 55%;
+    --mood-okay: 45 60% 55%;
+    --mood-low: 25 50% 55%;
+    --mood-bad: 0 50% 55%;
+
+    /* Activity type colors */
+    --activity-task: 155 35% 45%;
+    --activity-meal: 35 80% 50%;
+    --activity-movement: 200 70% 50%;
+    --activity-rest: 270 40% 60%;
+
+    /* Gradients */
+    --gradient-energy: linear-gradient(135deg, hsl(155 35% 45%), hsl(145 60% 55%));
+    --gradient-calm: linear-gradient(135deg, hsl(200 40% 95%), hsl(270 30% 95%));
+    --gradient-warm: linear-gradient(135deg, hsl(35 80% 95%), hsl(45 90% 92%));
+    --gradient-hero: linear-gradient(180deg, hsl(45 30% 98%) 0%, hsl(150 25% 96%) 100%);
+
+    /* Shadows */
+    --shadow-soft: 0 4px 20px -4px hsl(155 35% 45% / 0.15);
+    --shadow-card: 0 2px 12px -2px hsl(160 25% 15% / 0.08);
+    --shadow-elevated: 0 8px 30px -8px hsl(160 25% 15% / 0.12);
+
+    /* Sidebar */
+    --sidebar-background: 150 25% 97%;
+    --sidebar-foreground: 160 25% 25%;
+    --sidebar-primary: 155 35% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 150 20% 93%;
+    --sidebar-accent-foreground: 160 25% 25%;
+    --sidebar-border: 150 20% 90%;
+    --sidebar-ring: 155 35% 45%;
+  }
+
+  .dark {
+    --background: 160 25% 8%;
+    --foreground: 45 30% 95%;
+
+    --card: 160 20% 12%;
+    --card-foreground: 45 30% 95%;
+
+    --popover: 160 20% 12%;
+    --popover-foreground: 45 30% 95%;
+
+    --primary: 155 45% 55%;
+    --primary-foreground: 160 25% 8%;
+
+    --secondary: 160 15% 18%;
+    --secondary-foreground: 45 30% 90%;
+
+    --muted: 160 15% 20%;
+    --muted-foreground: 150 15% 60%;
+
+    --accent: 35 85% 55%;
+    --accent-foreground: 35 90% 10%;
+
+    --destructive: 0 60% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 160 15% 22%;
+    --input: 160 15% 22%;
+    --ring: 155 45% 55%;
+
+    --sidebar-background: 160 20% 10%;
+    --sidebar-foreground: 45 30% 90%;
+    --sidebar-primary: 155 45% 55%;
+    --sidebar-primary-foreground: 160 25% 8%;
+    --sidebar-accent: 160 15% 16%;
+    --sidebar-accent-foreground: 45 30% 90%;
+    --sidebar-border: 160 15% 18%;
+    --sidebar-ring: 155 45% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Poppins', system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .gradient-energy {
+    background: var(--gradient-energy);
+  }
+  
+  .gradient-calm {
+    background: var(--gradient-calm);
+  }
+  
+  .gradient-warm {
+    background: var(--gradient-warm);
+  }
+  
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  
+  .shadow-elevated {
+    box-shadow: var(--shadow-elevated);
+  }
+}

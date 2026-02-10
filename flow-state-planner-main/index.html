@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <title>EnergiePlanner - Plan je dag op basis van energie</title>
+    <meta name="description" content="Plan je dag slim op basis van je energie en welzijn. Gezondheidsherinneringen, taakprioritering en AI-gedreven planning." />
+    <meta name="author" content="EnergiePlanner" />
+    
+    <!-- Mobile App Meta -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="EnergiePlanner" />
+    <meta name="theme-color" content="#5a8a6c" />
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="EnergiePlanner - Slimme dagplanning" />
+    <meta property="og:description" content="Plan je dag op basis van energie en welzijn, niet alleen deadlines." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@EnergiePlanner" />
+    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    
+    <!-- Safe area for mobile -->
+    <style>
+      :root {
+        --sat: env(safe-area-inset-top);
+        --sar: env(safe-area-inset-right);
+        --sab: env(safe-area-inset-bottom);
+        --sal: env(safe-area-inset-left);
+      }
+      .pb-safe { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+    </style>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
