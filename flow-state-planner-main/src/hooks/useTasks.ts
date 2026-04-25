@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Task, EffortLevel, ImportanceLevel } from '@/types';
+import type { Task, EffortLevel, ImportanceLevel, TaskCategory, TaskSource, RecurrenceRule } from '@/types';
 import { toast } from 'sonner';
 
 interface DbTask {
@@ -15,6 +15,12 @@ interface DbTask {
   scheduled_time: string | null;
   duration: number;
   completed: boolean;
+  category: string | null;
+  external_id: string | null;
+  source: string | null;
+  recurrence_rule: string | null;
+  recurrence_end_date: string | null;
+  parent_task_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -31,6 +37,12 @@ function mapDbToTask(db: DbTask): Task {
     duration: db.duration,
     completed: db.completed,
     createdAt: new Date(db.created_at),
+    category: (db.category as TaskCategory) || undefined,
+    externalId: db.external_id || undefined,
+    source: (db.source as TaskSource) || 'manual',
+    recurrenceRule: (db.recurrence_rule as RecurrenceRule) || undefined,
+    recurrenceEndDate: db.recurrence_end_date ? new Date(db.recurrence_end_date) : undefined,
+    parentTaskId: db.parent_task_id || undefined,
   };
 }
 
@@ -83,6 +95,12 @@ export function useTasks() {
           scheduled_time: taskData.scheduledTime?.toISOString() || null,
           duration: taskData.duration,
           completed: false,
+          category: taskData.category || 'other',
+          external_id: taskData.externalId || null,
+          source: taskData.source || 'manual',
+          recurrence_rule: taskData.recurrenceRule || null,
+          recurrence_end_date: taskData.recurrenceEndDate?.toISOString() || null,
+          parent_task_id: taskData.parentTaskId || null,
         })
         .select()
         .single();
@@ -90,9 +108,41 @@ export function useTasks() {
       if (error) throw error;
       setTasks((prev) => [mapDbToTask(data), ...prev]);
       toast.success('Taak toegevoegd');
+      return mapDbToTask(data);
     } catch (error) {
       console.error('Error adding task:', error);
       toast.error('Kon taak niet toevoegen');
+    }
+  };
+
+  const addTasksBatch = async (tasksData: Omit<Task, 'id' | 'createdAt' | 'completed'>[]) => {
+    if (!user || tasksData.length === 0) return;
+
+    try {
+      const inserts = tasksData.map((taskData) => ({
+        user_id: user.id,
+        title: taskData.title,
+        description: taskData.description || null,
+        effort: taskData.effort,
+        importance: taskData.importance,
+        deadline: taskData.deadline?.toISOString() || null,
+        scheduled_time: taskData.scheduledTime?.toISOString() || null,
+        duration: taskData.duration,
+        completed: false,
+        category: taskData.category || 'other',
+        source: taskData.source || 'manual',
+        recurrence_rule: taskData.recurrenceRule || null,
+      }));
+
+      const { data, error } = await supabase.from('tasks').insert(inserts).select();
+      if (error) throw error;
+      const newTasks = (data || []).map(mapDbToTask);
+      setTasks((prev) => [...newTasks, ...prev]);
+      toast.success(`${newTasks.length} taken toegevoegd`);
+      return newTasks;
+    } catch (error) {
+      console.error('Error batch adding tasks:', error);
+      toast.error('Kon taken niet toevoegen');
     }
   };
 
@@ -111,6 +161,9 @@ export function useTasks() {
           scheduled_time: updatedTask.scheduledTime?.toISOString() || null,
           duration: updatedTask.duration,
           completed: updatedTask.completed,
+          category: updatedTask.category || 'other',
+          recurrence_rule: updatedTask.recurrenceRule || null,
+          recurrence_end_date: updatedTask.recurrenceEndDate?.toISOString() || null,
         })
         .eq('id', updatedTask.id)
         .eq('user_id', user.id);
@@ -145,7 +198,6 @@ export function useTasks() {
   const toggleTaskComplete = async (id: string) => {
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
-
     await updateTask({ ...task, completed: !task.completed });
   };
 
@@ -153,6 +205,7 @@ export function useTasks() {
     tasks,
     loading,
     addTask,
+    addTasksBatch,
     updateTask,
     deleteTask,
     toggleTaskComplete,

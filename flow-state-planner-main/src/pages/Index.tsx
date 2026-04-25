@@ -1,34 +1,60 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-  ChevronRight, 
-  Sparkles,
-  TrendingUp,
-} from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { EnergyIndicator } from "@/components/EnergyIndicator";
-import { MoodIndicator } from "@/components/MoodIndicator";
-import { TaskCard } from "@/components/TaskCard";
-import { HealthReminderCard } from "@/components/HealthReminderCard";
-import { EnergyTracker } from "@/components/EnergyTracker";
-import { DailyTimeline } from "@/components/DailyTimeline";
-import { AddTaskSheet } from "@/components/AddTaskSheet";
+import { AnimatePresence, motion } from "framer-motion";
+import { Plus, Zap, CheckCircle2, ChevronRight, Flame, Brain, Timer, Settings, BarChart2, Heart } from "lucide-react";
+import { AuthPage } from "@/components/AuthPage";
 import { BottomNav } from "@/components/BottomNav";
 import { SettingsPage } from "@/components/SettingsPage";
 import { TasksPage } from "@/components/TasksPage";
-import { EnergyPage } from "@/components/EnergyPage";
 import { EnergieCoachPage } from "@/components/EnergieCoachPage";
+import { BrainDumpPage } from "@/components/BrainDumpPage";
+import { FocusTimerPage } from "@/components/FocusTimerPage";
+import { HabitsPage } from "@/components/HabitsPage";
 import { InsightsPage } from "@/components/InsightsPage";
+import { EnergyPage } from "@/components/EnergyPage";
 import { EditTaskSheet } from "@/components/EditTaskSheet";
-import { AuthPage } from "@/components/AuthPage";
+import { AddTaskSheet } from "@/components/AddTaskSheet";
+import { EnergyTracker } from "@/components/EnergyTracker";
+import { TaskCard } from "@/components/TaskCard";
+import { DailyTimeline } from "@/components/DailyTimeline";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/contexts/ProfileContext";
 import { useTasks } from "@/hooks/useTasks";
 import { useEnergyLogs } from "@/hooks/useEnergyLogs";
-import { useProfile } from "@/hooks/useProfile";
 import { useHealthReminders } from "@/hooks/useHealthReminders";
-import type { Task, TimeBlock, EnergyLevel, MoodLevel, TabId } from "@/types";
+import { useHabits } from "@/hooks/useHabits";
+import type { Task, EnergyLevel, MoodLevel, TabId, TimeBlock } from "@/types";
+import { cn } from "@/lib/utils";
 
-// Sample time blocks for demo (will be generated from actual data later)
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 6) return "Slaap lekker";
+  if (hour < 12) return "Goedemorgen";
+  if (hour < 18) return "Goedemiddag";
+  return "Goedenavond";
+}
+
+function getEnergyLabel(level: EnergyLevel): string {
+  const labels: Record<EnergyLevel, string> = {
+    1: "Uitgeput", 2: "Laag", 3: "Gemiddeld", 4: "Goed", 5: "Top"
+  };
+  return labels[level];
+}
+
+function getEnergyGradient(level: EnergyLevel): string {
+  const gradients: Record<EnergyLevel, string> = {
+    1: "from-slate-400 to-slate-500",
+    2: "from-blue-400 to-blue-500",
+    3: "from-yellow-400 to-orange-400",
+    4: "from-emerald-400 to-teal-400",
+    5: "from-violet-500 to-indigo-500",
+  };
+  return gradients[level];
+}
+
+function getEnergyEmoji(level: EnergyLevel): string {
+  return ["🪫", "😴", "😐", "😊", "🚀"][level - 1];
+}
+
 const sampleTimeBlocks: TimeBlock[] = [
   { id: "b1", startTime: new Date(new Date().setHours(8, 0)), endTime: new Date(new Date().setHours(8, 30)), type: "meal" },
   { id: "b2", startTime: new Date(new Date().setHours(9, 0)), endTime: new Date(new Date().setHours(10, 0)), type: "task" },
@@ -39,331 +65,408 @@ const sampleTimeBlocks: TimeBlock[] = [
   { id: "b7", startTime: new Date(new Date().setHours(15, 30)), endTime: new Date(new Date().setHours(15, 40)), type: "rest" },
 ];
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Goedemorgen";
-  if (hour < 18) return "Goedemiddag";
-  return "Goedenavond";
-}
-
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
-  const { tasks, loading: tasksLoading, addTask, updateTask, deleteTask, toggleTaskComplete } = useTasks();
+  const { tasks, loading: tasksLoading, addTask, addTasksBatch, updateTask, deleteTask, toggleTaskComplete } = useTasks();
   const { energyLogs, addLog, getLatestLog } = useEnergyLogs();
   const { preferences, updatePreferences } = useProfile();
   const { reminders, toggleReminderComplete } = useHealthReminders();
-  
+  const { habits, isLoggedToday, logHabit, getStreak } = useHabits();
+
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [showEnergyTracker, setShowEnergyTracker] = useState(false);
+  const [showAddTask, setShowAddTask] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  // Get current energy and mood from latest log
   const latestLog = getLatestLog();
-  const currentEnergy: EnergyLevel = latestLog?.energy ?? 4;
-  const currentMood: MoodLevel = latestLog?.mood ?? 4;
+  const currentEnergy: EnergyLevel = latestLog?.energy ?? 3;
+  const currentMood: MoodLevel = latestLog?.mood ?? 3;
 
   const handleEnergySubmit = async (energy: EnergyLevel, mood: MoodLevel) => {
     await addLog(energy, mood);
     setShowEnergyTracker(false);
   };
 
-  // Show loading state
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Laden...</div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-primary/20 animate-pulse" />
+          <p className="text-sm text-muted-foreground">Flow State laden...</p>
+        </div>
       </div>
     );
   }
 
-  // Show auth page if not logged in
-  if (!user) {
-    return <AuthPage />;
-  }
+  if (!user) return <AuthPage />;
 
-  // Render different pages based on active tab
-  if (activeTab === 'settings') {
-    return (
-      <>
-        <SettingsPage 
-          preferences={preferences}
-          onUpdatePreferences={updatePreferences}
-          onSignOut={signOut}
-        />
-        <BottomNav activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as TabId)} />
-      </>
-    );
-  }
+  const navigateTo = (tab: TabId) => setActiveTab(tab);
 
-  if (activeTab === 'tasks') {
-    return (
-      <>
-        <TasksPage
-          tasks={tasks}
-          onToggleComplete={toggleTaskComplete}
-          onAddTask={addTask}
-          onEditTask={(task) => setEditingTask(task)}
-        />
-        <EditTaskSheet
-          task={editingTask}
-          open={!!editingTask}
-          onOpenChange={(open) => !open && setEditingTask(null)}
-          onSave={updateTask}
-          onDelete={deleteTask}
-        />
-        <BottomNav activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as TabId)} />
-      </>
-    );
-  }
+  if (activeTab === 'settings') return (
+    <PageWrapper>
+      <SettingsPage preferences={preferences} onUpdatePreferences={updatePreferences} onSignOut={signOut} />
+      <BottomNav activeTab={activeTab} onTabChange={(t) => setActiveTab(t as TabId)} />
+    </PageWrapper>
+  );
 
-  if (activeTab === 'energy') {
-    return (
-      <>
-        <EnergyPage
-          currentEnergy={currentEnergy}
-          currentMood={currentMood}
-          energyLogs={energyLogs}
-          onLogEnergy={handleEnergySubmit}
-        />
-        <BottomNav activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as TabId)} />
-      </>
-    );
-  }
+  if (activeTab === 'tasks') return (
+    <PageWrapper>
+      <TasksPage tasks={tasks} onToggleComplete={toggleTaskComplete} onAddTask={addTask} onEditTask={setEditingTask} onNavigate={navigateTo} />
+      <EditTaskSheet task={editingTask} open={!!editingTask} onOpenChange={(o) => !o && setEditingTask(null)} onSave={updateTask} onDelete={deleteTask} />
+      <BottomNav activeTab={activeTab} onTabChange={(t) => setActiveTab(t as TabId)} />
+    </PageWrapper>
+  );
 
-  if (activeTab === 'coach') {
-    return (
-      <>
-        <EnergieCoachPage />
-        <BottomNav activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as TabId)} />
-      </>
-    );
-  }
+  if (activeTab === 'coach') return (
+    <PageWrapper>
+      <EnergieCoachPage onNavigate={navigateTo} />
+      <BottomNav activeTab={activeTab} onTabChange={(t) => setActiveTab(t as TabId)} />
+    </PageWrapper>
+  );
 
-  if (activeTab === 'insights') {
-    return (
-      <>
-        <InsightsPage
-          tasks={tasks}
-          energyLogs={energyLogs}
-        />
-        <BottomNav activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as TabId)} />
-      </>
-    );
-  }
+  if (activeTab === 'braindump') return (
+    <PageWrapper>
+      <BrainDumpPage onTasksAdded={addTasksBatch} onNavigate={navigateTo} />
+      <BottomNav activeTab={activeTab} onTabChange={(t) => setActiveTab(t as TabId)} />
+    </PageWrapper>
+  );
 
+  if (activeTab === 'focus') return (
+    <PageWrapper>
+      <FocusTimerPage tasks={tasks} onTaskComplete={toggleTaskComplete} onNavigate={navigateTo} />
+      <BottomNav activeTab={activeTab} onTabChange={(t) => setActiveTab(t as TabId)} />
+    </PageWrapper>
+  );
+
+  if (activeTab === 'habits') return (
+    <PageWrapper>
+      <HabitsPage onNavigate={navigateTo} />
+      <BottomNav activeTab={activeTab} onTabChange={(t) => setActiveTab(t as TabId)} />
+    </PageWrapper>
+  );
+
+  if (activeTab === 'energy') return (
+    <PageWrapper>
+      <EnergyPage currentEnergy={currentEnergy} currentMood={currentMood} energyLogs={energyLogs} onLogEnergy={handleEnergySubmit} />
+      <BottomNav activeTab={activeTab} onTabChange={(t) => setActiveTab(t as TabId)} />
+    </PageWrapper>
+  );
+
+  if (activeTab === 'insights') return (
+    <PageWrapper>
+      <InsightsPage tasks={tasks} energyLogs={energyLogs} />
+      <BottomNav activeTab={activeTab} onTabChange={(t) => setActiveTab(t as TabId)} />
+    </PageWrapper>
+  );
+
+  // ── HOME DASHBOARD ──────────────────────────────────────
   const today = new Date();
-  const dateString = today.toLocaleDateString('nl-NL', { 
-    weekday: 'long', 
-    day: 'numeric', 
-    month: 'long' 
-  });
-
-  const completedTasks = tasks.filter(t => t.completed).length;
+  const dateStr = today.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+  const userName = preferences.name?.split(' ')[0] || '';
+  const completedToday = tasks.filter((t) => t.completed).length;
   const totalTasks = tasks.length;
-  const userName = preferences.name || '';
+  const pendingTasks = tasks.filter((t) => !t.completed);
+  const focusTask = pendingTasks.find((t) => t.effort === 'high' && t.importance >= 4) || pendingTasks[0];
+  const todayHabits = habits.filter((h) => isLoggedToday(h.id)).length;
 
   return (
-    <div className="min-h-screen bg-background pb-28">
-      {/* Header */}
-      <header className="gradient-hero pt-12 pb-8 px-6">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-lg mx-auto"
-        >
-          <div className="flex items-center justify-between mb-6">
+    <div className="min-h-screen bg-background pb-28 overflow-x-hidden">
+      {/* ── TOP HEADER ── */}
+      <header className="px-5 pt-14 pb-6">
+        <div className="max-w-lg mx-auto">
+          <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                {getGreeting()}{userName ? `, ${userName}` : ''} 👋
+              <p className="text-sm font-medium text-muted-foreground capitalize">{dateStr}</p>
+              <h1 className="text-2xl font-bold text-foreground mt-0.5">
+                {getGreeting()}{userName ? `, ${userName}` : ''} {currentEnergy >= 4 ? '✨' : '👋'}
               </h1>
-              <p className="text-muted-foreground capitalize">{dateString}</p>
             </div>
-            <div className="flex items-center gap-2 bg-card rounded-xl p-3 shadow-card">
-              <EnergyIndicator level={currentEnergy} size="sm" />
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-3 gap-3">
-            <Card className="p-4 text-center shadow-card">
-              <TrendingUp className="w-5 h-5 mx-auto mb-2 text-primary" />
-              <p className="text-xl font-bold text-foreground">{completedTasks}/{totalTasks}</p>
-              <p className="text-xs text-muted-foreground">Taken klaar</p>
-            </Card>
-            <Card 
-              className="p-4 text-center shadow-card cursor-pointer hover:shadow-elevated transition-shadow"
-              onClick={() => setShowEnergyTracker(true)}
+            <button
+              onClick={() => setActiveTab('settings')}
+              className="w-10 h-10 rounded-2xl bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
             >
-              <Sparkles className="w-5 h-5 mx-auto mb-2 text-accent" />
-              <div className="flex justify-center">
-                <EnergyIndicator level={currentEnergy} size="sm" />
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Energie</p>
-            </Card>
-            <Card 
-              className="p-4 text-center shadow-card cursor-pointer hover:shadow-elevated transition-shadow"
-              onClick={() => setShowEnergyTracker(true)}
-            >
-              <MoodIndicator level={currentMood} size="sm" />
-              <p className="text-xs text-muted-foreground mt-1">Stemming</p>
-            </Card>
-          </div>
-        </motion.div>
-      </header>
-
-      {/* Main Content */}
-      <main className="px-6 -mt-4 max-w-lg mx-auto">
-        {/* Energy Tracker Modal */}
-        <AnimatePresence>
-          {showEnergyTracker && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="mb-6"
-            >
-              <EnergyTracker 
-                onSubmit={handleEnergySubmit}
-                currentEnergy={currentEnergy}
-                currentMood={currentMood}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Daily Timeline */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-8"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Dagplanning</h2>
-            <button 
-              className="flex items-center gap-1 text-sm text-primary font-medium"
-              onClick={() => setActiveTab('tasks')}
-            >
-              Details <ChevronRight className="w-4 h-4" />
+              <Settings className="w-4.5 h-4.5 text-muted-foreground" strokeWidth={1.8} />
             </button>
           </div>
-          <Card className="p-5 shadow-card">
-            <DailyTimeline blocks={sampleTimeBlocks} />
-          </Card>
-        </motion.section>
+        </div>
+      </header>
 
-        {/* AI Insight */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="mb-8"
-        >
-          <Card className="p-5 gradient-energy text-white shadow-elevated">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-white/20 rounded-xl">
-                <Sparkles className="w-5 h-5" />
+      <main className="px-5 max-w-lg mx-auto space-y-6">
+        {/* ── ENERGY CHECK-IN CARD ── */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+          {showEnergyTracker ? (
+            <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}>
+              <EnergyTracker onSubmit={handleEnergySubmit} currentEnergy={currentEnergy} currentMood={currentMood} />
+            </motion.div>
+          ) : (
+            <button
+              onClick={() => setShowEnergyTracker(true)}
+              className={cn(
+                "w-full rounded-2xl p-5 text-white bg-gradient-to-r shadow-lg active:scale-[0.98] transition-transform text-left",
+                getEnergyGradient(currentEnergy)
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white/70 text-sm font-medium">Energie nu</p>
+                  <div className="flex items-baseline gap-2 mt-0.5">
+                    <span className="text-3xl font-bold">{getEnergyEmoji(currentEnergy)}</span>
+                    <span className="text-xl font-semibold">{getEnergyLabel(currentEnergy)}</span>
+                  </div>
+                  <p className="text-white/60 text-xs mt-1">Tik om bij te werken</p>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <div className="bg-white/20 rounded-xl px-3 py-1.5 text-sm font-semibold">
+                    {currentEnergy}/5
+                  </div>
+                  <div className="text-xs text-white/60">{totalTasks > 0 ? `${completedToday}/${totalTasks} klaar` : 'Geen taken'}</div>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold mb-1">AI Inzicht</h3>
-                <p className="text-sm text-white/90">
-                  {currentEnergy >= 4 
-                    ? `Je energie is momenteel hoog! Dit is een goed moment voor je belangrijkste taak${tasks.find(t => !t.completed && t.effort === 'high') ? `: "${tasks.find(t => !t.completed && t.effort === 'high')?.title}"` : ''}.`
-                    : currentEnergy >= 3
-                    ? "Je energie is gemiddeld. Focus op taken met gemiddelde inspanning en plan een korte pauze."
-                    : "Je energie is laag. Overweeg een pauze, wat beweging of een snack."}
-                </p>
+            </button>
+          )}
+        </motion.div>
+
+        {/* ── QUICK STATS ROW ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-3 gap-3"
+        >
+          <QuickStatCard
+            icon={<CheckCircle2 className="w-4 h-4" />}
+            value={`${completedToday}/${totalTasks}`}
+            label="Taken"
+            color="text-emerald-500"
+            onClick={() => setActiveTab('tasks')}
+          />
+          <QuickStatCard
+            icon={<Flame className="w-4 h-4" />}
+            value={`${todayHabits}/${habits.length || 0}`}
+            label="Gewoonten"
+            color="text-orange-500"
+            onClick={() => setActiveTab('habits')}
+          />
+          <QuickStatCard
+            icon={<Heart className="w-4 h-4" />}
+            value={reminders.filter((r) => r.completed).length + '/' + reminders.length}
+            label="Reminders"
+            color="text-rose-500"
+            onClick={() => setActiveTab('energy')}
+          />
+        </motion.div>
+
+        {/* ── FOCUS NOW CARD ── */}
+        {focusTask && (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+            <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+              <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  <span className="text-xs font-semibold text-primary uppercase tracking-wider">Focus nu op</span>
+                </div>
+                <button
+                  onClick={() => setActiveTab('focus')}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Timer className="w-3.5 h-3.5" />
+                  Start timer
+                </button>
+              </div>
+              <div className="px-4 pb-4">
+                <h3 className="font-semibold text-foreground text-base">{focusTask.title}</h3>
+                {focusTask.description && (
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{focusTask.description}</p>
+                )}
+                <div className="flex items-center gap-3 mt-3">
+                  <span className={cn("text-xs font-medium px-2.5 py-1 rounded-lg", {
+                    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400": focusTask.effort === 'low',
+                    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400": focusTask.effort === 'medium',
+                    "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400": focusTask.effort === 'high',
+                  })}>
+                    {focusTask.effort === 'low' ? 'Makkelijk' : focusTask.effort === 'medium' ? 'Gemiddeld' : 'Intensief'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{focusTask.duration} min</span>
+                  <div className="flex items-center gap-0.5 ml-auto">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <div key={i} className={cn("w-1.5 h-1.5 rounded-full", i < focusTask.importance ? "bg-primary" : "bg-muted")} />
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
-          </Card>
-        </motion.section>
+          </motion.div>
+        )}
 
-        {/* Health Reminders */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mb-8"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Gezondheidsherinneringen</h2>
+        {/* ── DAILY TIMELINE ── */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <SectionHeader title="Dagplanning" action={{ label: "Alles", onClick: () => setActiveTab('tasks') }} />
+          <div className="rounded-2xl border border-border bg-card shadow-sm p-4">
+            <DailyTimeline blocks={sampleTimeBlocks} />
           </div>
-          <div className="space-y-3">
-            {reminders.length === 0 ? (
-              <Card className="p-4 text-center text-muted-foreground">
-                Geen herinneringen voor vandaag
-              </Card>
+        </motion.div>
+
+        {/* ── UPCOMING TASKS ── */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+          <SectionHeader
+            title="Komende taken"
+            action={{ label: "Alles zien", onClick: () => setActiveTab('tasks') }}
+          />
+          <div className="space-y-2">
+            {tasksLoading ? (
+              <LoadingSkeleton />
+            ) : pendingTasks.length === 0 ? (
+              <EmptyState
+                icon={<CheckCircle2 className="w-8 h-8 text-emerald-500" />}
+                title="Alles klaar!"
+                subtitle="Voeg een nieuwe taak toe"
+                action={{ label: "Taak toevoegen", onClick: () => setShowAddTask(true) }}
+              />
             ) : (
-              reminders.slice(0, 3).map((reminder) => (
-                <HealthReminderCard 
-                  key={reminder.id} 
-                  reminder={reminder}
-                  onToggleComplete={toggleReminderComplete}
-                />
+              pendingTasks.slice(0, 3).map((task, i) => (
+                <motion.div key={task.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 + i * 0.05 }}>
+                  <TaskCard task={task} onToggleComplete={toggleTaskComplete} onEdit={() => setEditingTask(task)} />
+                </motion.div>
               ))
             )}
-          </div>
-        </motion.section>
-
-        {/* Tasks */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="mb-8"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Taken vandaag</h2>
-            <AddTaskSheet onAdd={addTask} />
-          </div>
-          <div className="space-y-3">
-            {tasksLoading ? (
-              <Card className="p-4 text-center text-muted-foreground">
-                Laden...
-              </Card>
-            ) : tasks.length === 0 ? (
-              <Card className="p-4 text-center text-muted-foreground">
-                Nog geen taken. Voeg je eerste taak toe!
-              </Card>
-            ) : (
-              <>
-                <AnimatePresence>
-                  {tasks.slice(0, 3).map((task) => (
-                    <TaskCard 
-                      key={task.id} 
-                      task={task}
-                      onToggleComplete={toggleTaskComplete}
-                      onEdit={() => setEditingTask(task)}
-                    />
-                  ))}
-                </AnimatePresence>
-                {tasks.length > 3 && (
-                  <button 
-                    onClick={() => setActiveTab('tasks')}
-                    className="w-full py-3 text-sm text-primary font-medium hover:underline"
-                  >
-                    Bekijk alle {tasks.length} taken →
-                  </button>
-                )}
-              </>
+            {pendingTasks.length > 3 && (
+              <button onClick={() => setActiveTab('tasks')} className="w-full py-2.5 text-sm text-primary font-medium hover:underline">
+                +{pendingTasks.length - 3} meer taken →
+              </button>
             )}
           </div>
-        </motion.section>
+        </motion.div>
+
+        {/* ── QUICK ACTIONS ── */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <SectionHeader title="Snelle acties" />
+          <div className="grid grid-cols-2 gap-3">
+            <QuickActionCard
+              icon={<Brain className="w-5 h-5" />}
+              title="Brain Dump"
+              subtitle="Alles kwijt in je hoofd"
+              color="from-violet-500/20 to-purple-500/10"
+              iconColor="text-violet-600 dark:text-violet-400"
+              onClick={() => setActiveTab('braindump')}
+            />
+            <QuickActionCard
+              icon={<Timer className="w-5 h-5" />}
+              title="Focus Timer"
+              subtitle="Pomodoro starten"
+              color="from-orange-500/20 to-amber-500/10"
+              iconColor="text-orange-600 dark:text-orange-400"
+              onClick={() => setActiveTab('focus')}
+            />
+            <QuickActionCard
+              icon={<BarChart2 className="w-5 h-5" />}
+              title="Inzichten"
+              subtitle="Patronen & statistieken"
+              color="from-blue-500/20 to-cyan-500/10"
+              iconColor="text-blue-600 dark:text-blue-400"
+              onClick={() => setActiveTab('insights')}
+            />
+            <QuickActionCard
+              icon={<Zap className="w-5 h-5" />}
+              title="Energie loggen"
+              subtitle="Hoe voel je je?"
+              color="from-emerald-500/20 to-teal-500/10"
+              iconColor="text-emerald-600 dark:text-emerald-400"
+              onClick={() => setShowEnergyTracker(true)}
+            />
+          </div>
+        </motion.div>
       </main>
 
-      {/* Edit Task Sheet */}
-      <EditTaskSheet
-        task={editingTask}
-        open={!!editingTask}
-        onOpenChange={(open) => !open && setEditingTask(null)}
-        onSave={updateTask}
-        onDelete={deleteTask}
-      />
+      {/* ── FLOATING ADD BUTTON ── */}
+      <motion.button
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.4, type: "spring" }}
+        onClick={() => setShowAddTask(true)}
+        className="fixed bottom-24 right-5 w-14 h-14 rounded-full bg-primary shadow-xl shadow-primary/30 flex items-center justify-center text-primary-foreground hover:scale-105 active:scale-95 transition-transform z-40"
+      >
+        <Plus className="w-6 h-6" strokeWidth={2.5} />
+      </motion.button>
 
-      {/* Bottom Navigation */}
-      <BottomNav activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as TabId)} />
+      {/* ── SHEETS & MODALS ── */}
+      <AddTaskSheet open={showAddTask} onOpenChange={setShowAddTask} onAdd={addTask} />
+      <EditTaskSheet task={editingTask} open={!!editingTask} onOpenChange={(o) => !o && setEditingTask(null)} onSave={updateTask} onDelete={deleteTask} />
+      <BottomNav activeTab={activeTab} onTabChange={(t) => setActiveTab(t as TabId)} />
     </div>
   );
 };
+
+// ── SUB-COMPONENTS ──
+
+function PageWrapper({ children }: { children: React.ReactNode }) {
+  return <div className="min-h-screen bg-background">{children}</div>;
+}
+
+function SectionHeader({ title, action }: { title: string; action?: { label: string; onClick: () => void } }) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <h2 className="text-base font-semibold text-foreground">{title}</h2>
+      {action && (
+        <button onClick={action.onClick} className="flex items-center gap-0.5 text-sm text-primary font-medium hover:underline">
+          {action.label} <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function QuickStatCard({ icon, value, label, color, onClick }: { icon: React.ReactNode; value: string; label: string; color: string; onClick?: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-2xl border border-border bg-card p-4 text-center shadow-sm hover:shadow-md active:scale-[0.97] transition-all"
+    >
+      <div className={cn("flex justify-center mb-2", color)}>{icon}</div>
+      <p className="text-lg font-bold text-foreground leading-tight">{value}</p>
+      <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+    </button>
+  );
+}
+
+function QuickActionCard({ icon, title, subtitle, color, iconColor, onClick }: { icon: React.ReactNode; title: string; subtitle: string; color: string; iconColor: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn("rounded-2xl bg-gradient-to-br p-4 text-left active:scale-[0.97] transition-transform border border-border/50 shadow-sm hover:shadow-md", color)}
+    >
+      <div className={cn("mb-3", iconColor)}>{icon}</div>
+      <p className="font-semibold text-sm text-foreground">{title}</p>
+      <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+    </button>
+  );
+}
+
+function EmptyState({ icon, title, subtitle, action }: { icon: React.ReactNode; title: string; subtitle?: string; action?: { label: string; onClick: () => void } }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-8 text-center">
+      <div className="flex justify-center mb-3">{icon}</div>
+      <h3 className="font-semibold text-foreground">{title}</h3>
+      {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
+      {action && (
+        <button onClick={action.onClick} className="mt-3 text-sm text-primary font-medium hover:underline">
+          {action.label}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-2">
+      {[1, 2].map((i) => (
+        <div key={i} className="rounded-2xl border border-border bg-card p-4 animate-pulse">
+          <div className="h-4 bg-muted rounded-lg w-3/4 mb-2" />
+          <div className="h-3 bg-muted rounded-lg w-1/2" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default Index;

@@ -1,9 +1,15 @@
-// Core types for EnergiePlanner
+// Core types for Flow State — AI-powered life operating system
 
 export type EnergyLevel = 1 | 2 | 3 | 4 | 5;
 export type MoodLevel = 1 | 2 | 3 | 4 | 5;
 export type EffortLevel = 'low' | 'medium' | 'high';
 export type ImportanceLevel = 1 | 2 | 3 | 4 | 5;
+export type TaskCategory = 'work' | 'health' | 'creative' | 'social' | 'admin' | 'other';
+export type TaskSource = 'google' | 'outlook' | 'manual';
+export type RecurrenceRule = 'daily' | 'weekly' | 'monthly';
+export type ThemeMode = 'light' | 'dark' | 'system';
+export type WearableProvider = 'garmin' | 'fitbit' | 'oura' | 'apple_health' | 'samsung_health';
+export type SubscriptionPlan = 'free' | 'pro';
 
 export interface Task {
   id: string;
@@ -16,6 +22,12 @@ export interface Task {
   duration: number; // in minutes
   completed: boolean;
   createdAt: Date;
+  category?: TaskCategory;
+  externalId?: string;
+  source?: TaskSource;
+  recurrenceRule?: RecurrenceRule;
+  recurrenceEndDate?: Date;
+  parentTaskId?: string;
 }
 
 export interface EnergyLog {
@@ -54,8 +66,27 @@ export interface DailyPlan {
   reminders: HealthReminder[];
 }
 
+export interface Habit {
+  id: string;
+  userId: string;
+  title: string;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  targetCount: number;
+  color: string;
+  icon: string;
+  createdAt: Date;
+}
+
+export interface HabitLog {
+  id: string;
+  habitId: string;
+  userId: string;
+  completedAt: string; // DATE string "YYYY-MM-DD"
+}
+
 export interface UserPreferences {
   name: string;
+  theme: ThemeMode;
   wakeTime: string; // "07:00"
   sleepTime: string; // "23:00"
   mealTimes: { breakfast: string; lunch: string; dinner: string };
@@ -65,10 +96,12 @@ export interface UserPreferences {
   movementInterval: number; // minutes between movement reminders
   workStartTime: string;
   workEndTime: string;
+  subscription?: SubscriptionPlan;
 }
 
 export const defaultPreferences: UserPreferences = {
   name: '',
+  theme: 'system',
   wakeTime: '07:00',
   sleepTime: '23:00',
   mealTimes: { breakfast: '08:00', lunch: '12:30', dinner: '18:30' },
@@ -78,6 +111,7 @@ export const defaultPreferences: UserPreferences = {
   movementInterval: 90,
   workStartTime: '09:00',
   workEndTime: '17:00',
+  subscription: 'free',
 };
 
-export type TabId = 'home' | 'tasks' | 'energy' | 'coach' | 'insights' | 'settings';
+export type TabId = 'home' | 'tasks' | 'braindump' | 'focus' | 'coach' | 'energy' | 'habits' | 'insights' | 'settings';
