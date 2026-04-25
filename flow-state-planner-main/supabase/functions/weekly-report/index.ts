@@ -73,18 +73,18 @@ Schrijf 3–4 alinea's:
 
 Schrijf in je-/jouw stijl, warm en persoonlijk. Geen opsommingen.`;
 
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    const apiKey = Deno.env.get("GROQ_API_KEY");
     if (!apiKey) {
-      return new Response(JSON.stringify({ report: "Weekrapport is niet beschikbaar. Stel LOVABLE_API_KEY in als Edge Function secret." }), {
+      return new Response(JSON.stringify({ report: "Weekrapport is niet beschikbaar. Stel GROQ_API_KEY in als Edge Function secret." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const aiResp = await fetch("https://api.lovable.dev/v1/chat/completions", {
+    const aiResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "google/gemini-flash-1.5",
+        model: "llama-3.3-70b-versatile",
         messages: [{ role: "user", content: prompt }],
         max_tokens: 600,
       }),
