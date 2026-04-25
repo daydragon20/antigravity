@@ -1,0 +1,19 @@
+{
+  "name": "Flow State",
+  "short_name": "Flow State",
+  "description": "De enige planner die weet hoe laat je vergadering is én hoe moe je bent.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#6366f1",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["productivity", "lifestyle", "health"],
+  "lang": "nl"
+}
